@@ -6,8 +6,8 @@
 // @author       RD
 // @match        https://ala.socium.kz/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=socium.kz
-// @updateURL    https://raw.githubusercontent.com/RuslanDTKZ/ardi-tampermonkey/main/ardi.user.js
-// @downloadURL  https://raw.githubusercontent.com/RuslanDTKZ/ardi-tampermonkey/main/ardi.user.js
+// @updateURL    https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js
+// @downloadURL  https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        unsafeWindow
