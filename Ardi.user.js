@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ardi
 // @namespace    https://github.com/RuslanDTKZ/ardi-tampermonkey
-// @version      4.9
+// @version      4.10
 // @description  PrimeFaces automation с UI-настройками
 // @author       RD
 // @match        https://ala.socium.kz/*
