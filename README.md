@@ -3,10 +3,10 @@
 ## 📥 Установка
 
 1. Установить расширение **Tampermonkey**
-   - Chrome / Edge / Firefox
+   - Chrome / Edge / Firefox https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo
 
 2. Открыть ссылку:
-https://raw.githubusercontent.com/RuslanDTKZ/ardi/edit/main/ardi.user.js
+https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js
 
 3. Нажать **Установить**
 
