@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ardi
 // @namespace    https://github.com/RuslanDTKZ/ardi-tampermonkey
-// @version      4.12
+// @version      4.13
 // @description  PrimeFaces automation с UI-настройками
 // @author       RD
 // @match        https://ala.socium.kz/*
@@ -24,6 +24,7 @@
         EVENT_TEXT: 'B.0.13 ^поддержание условий проживания в соответствии с санитарно-гигиеническими требованиями',
         FORM_DATA: {
             date: getTodayDate(),
+            AUTO_UPDATE_DATE: true,
             number: '30',
             text: 'Поддержание условий проживания в соответствии с санитарно-гигиеническими требованиями - выполнено'
         },
@@ -47,6 +48,25 @@
         const d = new Date();
         const pad = n => String(n).padStart(2, '0');
         return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function formatDateTime(input) {
+        // Попытка разобрать дату через split
+        let [datePart, timePart] = input.trim().split(' ');
+
+        if (!datePart) return getTodayDate(); // fallback
+
+        let [day, month, year] = datePart.split('.').map(n => parseInt(n, 10));
+        if (!year) year = new Date().getFullYear(); // если год не указан
+
+        if (!timePart) timePart = '00:00';
+        let [hours, minutes] = timePart.split(':').map(n => parseInt(n, 10));
+        if (isNaN(hours)) hours = 0;
+        if (isNaN(minutes)) minutes = 0;
+
+        const pad = n => String(n).padStart(2, '0');
+
+        return `${pad(day)}.${pad(month)}.${year} ${pad(hours)}:${pad(minutes)}`;
     }
 
     /* ================= STORAGE ================= */
@@ -181,6 +201,10 @@
 
         Дата<br>
         <input id="dt" style="width:100%" value="${s.FORM_DATA.date}"><br>
+        <label style="color:#ffffff">
+    <input type="checkbox" id="autoDate" ${s.AUTO_UPDATE_DATE ? 'checked' : ''}>
+    Автоматически обновлять дату на сегодня
+</label><br><br>
         Продолжительность<br>
         <input id="nm" style="width:100%" value="${s.FORM_DATA.number}"><br>
         Примечание<br>
@@ -212,6 +236,7 @@
                     number: p.querySelector('#nm').value.trim(),
                     text: p.querySelector('#tx').value.trim()
                 },
+                AUTO_UPDATE_DATE: p.querySelector('#autoDate').checked,
                 AUTO_NEXT_ON_CLOSE: p.querySelector('#an').checked,
                 PARTICIPANTS_ENABLED: p.querySelector('#pe').checked,
                 PARTICIPANTS: p.querySelector('#pl').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
@@ -232,6 +257,52 @@
             p.querySelector('#an').checked = DEFAULT_SETTINGS.AUTO_NEXT_ON_CLOSE;
         };
 
+    }
+
+    function updateDateKeepingTime(dateStr) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+
+        let [datePart, timePart] = dateStr.trim().split(' ');
+
+        // если времени нет, ставим 08:30 по умолчанию
+        if (!timePart) timePart = '08:30';
+        let [hours, minutes] = timePart.split(':').map(n => parseInt(n, 10));
+        if (isNaN(hours)) hours = 8;
+        if (isNaN(minutes)) minutes = 30;
+
+        return `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()} ${pad(hours)}:${pad(minutes)}`;
+    }
+
+    function safeFormatDateTime(input) {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+
+        let [datePart, timePart] = (input || '').trim().split(' ');
+
+        // --- Обработка даты ---
+        let day = now.getDate();
+        let month = now.getMonth() + 1;
+        let year = now.getFullYear();
+
+        if (datePart) {
+            const d = datePart.split('.').map(n => parseInt(n, 10));
+            if (!isNaN(d[0]) && d[0] >= 1 && d[0] <= 31) day = d[0];
+            if (!isNaN(d[1]) && d[1] >= 1 && d[1] <= 12) month = d[1];
+            if (!isNaN(d[2]) && d[2] > 1900) year = d[2];
+        }
+
+        // --- Обработка времени ---
+        let hours = 8; // default
+        let minutes = 30; // default
+
+        if (timePart) {
+            const t = timePart.split(':').map(n => parseInt(n, 10));
+            if (!isNaN(t[0]) && t[0] >= 0 && t[0] <= 23) hours = t[0];
+            if (!isNaN(t[1]) && t[1] >= 0 && t[1] <= 59) minutes = t[1];
+        }
+
+        return `${pad(day)}.${pad(month)}.${year} ${pad(hours)}:${pad(minutes)}`;
     }
 
     /* ================= EVENT ================= */
@@ -350,7 +421,11 @@
         lockSaveButton(true);
         const s = loadSettings();
 
-        d.value = s.FORM_DATA.date;
+        d.value = s.AUTO_UPDATE_DATE
+            ? updateDateKeepingTime(s.FORM_DATA.date) // обновляем дату на сегодня, время сохраняем
+        : safeFormatDateTime(s.FORM_DATA.date); // проверяем границы и исправляем ввод
+
+
         n.value = s.FORM_DATA.number;
         x.value = s.FORM_DATA.text;
 
@@ -492,6 +567,7 @@
     }
 
     function watchDialogHide() {
+        let lastDialogId = null; // чтобы не срабатывать дважды
         const obs = new MutationObserver(mutations => {
             const s = loadSettings();
             if (!s.AUTO_NEXT_ON_CLOSE) return;
@@ -501,10 +577,15 @@
                 if (
                     el.classList?.contains('ui-dialog') &&
                     el.id?.includes('msuEventTable') &&
-                    el.style.display === 'none'
+                    el.style.display === 'none' &&
+                    el.id !== lastDialogId
                 ) {
+                    lastDialogId = el.id; // фиксируем, что уже сработали
                     showStatus('➡ Форма закрыта — автопереход');
-                    setTimeout(goNext, 500);
+                    setTimeout(() => {
+                        lastDialogId = null; // сбрасываем после перехода
+                        goNext();
+                    }, 500);
                 }
             });
         });
@@ -515,6 +596,7 @@
             attributeFilter: ['style', 'class']
         });
     }
+
 
 
 
