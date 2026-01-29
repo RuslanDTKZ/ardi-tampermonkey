@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ardi
 // @namespace    https://github.com/RuslanDTKZ/ardi-tampermonkey
-// @version      4.13
+// @version      4.14
 // @description  PrimeFaces automation с UI-настройками
 // @author       RD
 // @match        https://ala.socium.kz/*
@@ -259,51 +259,55 @@
 
     }
 
-    function updateDateKeepingTime(dateStr) {
+    function updateDateKeepingTime(input) {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
 
-        let [datePart, timePart] = dateStr.trim().split(' ');
+        const { value, fixed } = safeFormatDateTime(input);
 
-        // если времени нет, ставим 08:30 по умолчанию
-        if (!timePart) timePart = '08:30';
-        let [hours, minutes] = timePart.split(':').map(n => parseInt(n, 10));
-        if (isNaN(hours)) hours = 8;
-        if (isNaN(minutes)) minutes = 30;
+        const time = value.split(' ')[1];
 
-        return `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()} ${pad(hours)}:${pad(minutes)}`;
+        return `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()} ${time}`;
     }
 
     function safeFormatDateTime(input) {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
 
+        let fixed = false;
+
         let [datePart, timePart] = (input || '').trim().split(' ');
 
-        // --- Обработка даты ---
-        let day = now.getDate();
-        let month = now.getMonth() + 1;
-        let year = now.getFullYear();
-
-        if (datePart) {
-            const d = datePart.split('.').map(n => parseInt(n, 10));
-            if (!isNaN(d[0]) && d[0] >= 1 && d[0] <= 31) day = d[0];
-            if (!isNaN(d[1]) && d[1] >= 1 && d[1] <= 12) month = d[1];
-            if (!isNaN(d[2]) && d[2] > 1900) year = d[2];
+        // ---- DATE ----
+        let d, m, y;
+        if (datePart && /^\d{2}\.\d{2}\.\d{4}$/.test(datePart)) {
+            [d, m, y] = datePart.split('.').map(Number);
+            d = Math.min(Math.max(d, 1), 31);
+            m = Math.min(Math.max(m, 1), 12);
+        } else {
+            fixed = true;
+            d = now.getDate();
+            m = now.getMonth() + 1;
+            y = now.getFullYear();
         }
 
-        // --- Обработка времени ---
-        let hours = 8; // default
-        let minutes = 30; // default
-
-        if (timePart) {
-            const t = timePart.split(':').map(n => parseInt(n, 10));
-            if (!isNaN(t[0]) && t[0] >= 0 && t[0] <= 23) hours = t[0];
-            if (!isNaN(t[1]) && t[1] >= 0 && t[1] <= 59) minutes = t[1];
+        // ---- TIME ----
+        let h = 8, min = 30;
+        if (timePart && /^\d{1,2}:\d{1,2}$/.test(timePart)) {
+            let [hh, mm] = timePart.split(':').map(Number);
+            if (hh >= 0 && hh <= 23) h = hh; else fixed = true;
+            if (mm >= 0 && mm <= 59) min = mm; else fixed = true;
+        } else {
+            fixed = true;
         }
 
-        return `${pad(day)}.${pad(month)}.${year} ${pad(hours)}:${pad(minutes)}`;
+        return {
+            value: `${pad(d)}.${pad(m)}.${y} ${pad(h)}:${pad(min)}`,
+            fixed
+        };
     }
+
+
 
     /* ================= EVENT ================= */
 
@@ -421,10 +425,17 @@
         lockSaveButton(true);
         const s = loadSettings();
 
-        d.value = s.AUTO_UPDATE_DATE
-            ? updateDateKeepingTime(s.FORM_DATA.date) // обновляем дату на сегодня, время сохраняем
-        : safeFormatDateTime(s.FORM_DATA.date); // проверяем границы и исправляем ввод
+        let dateFixed = false;
 
+        if (s.AUTO_UPDATE_DATE) {
+            const res = safeFormatDateTime(s.FORM_DATA.date);
+            dateFixed = res.fixed;
+            d.value = updateDateKeepingTime(res.value);
+        } else {
+            const res = safeFormatDateTime(s.FORM_DATA.date);
+            dateFixed = res.fixed;
+            d.value = res.value;
+        }
 
         n.value = s.FORM_DATA.number;
         x.value = s.FORM_DATA.text;
@@ -437,9 +448,19 @@
 
         if (s.PARTICIPANTS_ENABLED) addParticipants();
 
-        showStatus('✍️ Форма заполнена');
         unlockSaveButton();
+        showStatus('✍️ Форма заполнена');
+
+        // 🚨 ВАЖНОЕ — отдельно и заметно
+        if (dateFixed) {
+            alert(
+                '⚠ Введённая дата или время были некорректны.\n' +
+                'Значения автоматически исправлены.\n\n' +
+                'Пожалуйста, проверьте дату перед сохранением.'
+            );
+        }
     }
+
 
     /* ================= Управление кнопкой «Сохранить» ================= */
 
