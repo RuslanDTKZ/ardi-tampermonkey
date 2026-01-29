@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ardi
 // @namespace    https://github.com/RuslanDTKZ/ardi-tampermonkey
-// @version      4.10
+// @version      4.11
 // @description  PrimeFaces automation с UI-настройками
 // @author       RD
 // @match        https://ala.socium.kz/*
@@ -14,10 +14,6 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* ======================
-   Ardi — версия 4.9
-   Автообновление через GitHub
-   ====================== */
 
 (function () {
 'use strict';
@@ -31,6 +27,7 @@ const DEFAULT_SETTINGS = {
         number: '30',
         text: 'Поддержание условий проживания в соответствии с санитарно-гигиеническими требованиями - выполнено'
     },
+    AUTO_NEXT_ON_CLOSE: false,
     PARTICIPANTS_ENABLED: false,
     PARTICIPANTS: [
         'БАТЫРКУЛОВА КЕУКЕР ЕРЕЖЕПОВНА',
@@ -100,7 +97,6 @@ function createUI() {
         <button id="settings" style="margin-left:auto">⚙ Настройки</button><br>
         <button id="start">▶ Старт</button>
         <button id="next">➡ Следующий</button>
-        <button id="saveNext">💾➡ Сохранить и далее</button>
         <div id="status" style="margin-top:8px;font-size:12px;color:#90caf9"></div>
     </div>
     `;
@@ -129,7 +125,6 @@ function createUI() {
     };
 
     box.querySelector('#next').onclick = goNext;
-    box.querySelector('#saveNext').onclick = '';
     const fileInput = box.querySelector('#csv');
     if (loadLinks().length) {
     const links = loadLinks();
@@ -195,6 +190,11 @@ function openSettingsUI() {
 
         Соисполнители (по одному на строку)<br>
         <textarea id="pl" style="width:100%">${s.PARTICIPANTS.join('\n')}</textarea><br><br>
+        <label style="color:#ffffff">
+    <input type="checkbox" id="an" ${s.AUTO_NEXT_ON_CLOSE ? 'checked' : ''}>
+    Автопереход при закрытии формы
+</label><br><br>
+
 
         <button id="sv">💾 Сохранить</button>
         <button id="rs">♻ Сброс</button>
@@ -212,6 +212,7 @@ function openSettingsUI() {
                 number: p.querySelector('#nm').value.trim(),
                 text: p.querySelector('#tx').value.trim()
             },
+            AUTO_NEXT_ON_CLOSE: p.querySelector('#an').checked,
             PARTICIPANTS_ENABLED: p.querySelector('#pe').checked,
             PARTICIPANTS: p.querySelector('#pl').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
         });
@@ -228,6 +229,7 @@ function openSettingsUI() {
     p.querySelector('#tx').value = DEFAULT_SETTINGS.FORM_DATA.text;
     p.querySelector('#pe').checked = DEFAULT_SETTINGS.PARTICIPANTS_ENABLED;
     p.querySelector('#pl').value = DEFAULT_SETTINGS.PARTICIPANTS.join('\n');
+    p.querySelector('#an').checked = DEFAULT_SETTINGS.AUTO_NEXT_ON_CLOSE;
 };
 
 }
@@ -236,6 +238,12 @@ function openSettingsUI() {
 
 function waitForEvent() {
     const s = loadSettings();
+
+    if (!s.EVENT_TEXT || !s.EVENT_TEXT.trim()) {
+        showStatus('⚠️ Укажите фильтр мероприятий');
+        return;
+    }
+
     const t = setInterval(() => {
         document.querySelectorAll('label[id^="msuEventTable"]').forEach(l => {
             if (l.textContent.includes(s.EVENT_TEXT)) {
@@ -249,6 +257,7 @@ function waitForEvent() {
         });
     }, 500);
 }
+
 
 /* ================= FORM ================= */
 
@@ -355,6 +364,32 @@ function goNext() {
     location.href = l[i];
 }
 
+    function watchDialogHide() {
+    const obs = new MutationObserver(mutations => {
+        const s = loadSettings();
+        if (!s.AUTO_NEXT_ON_CLOSE) return;
+
+        mutations.forEach(m => {
+            const el = m.target;
+            if (
+                el.classList?.contains('ui-dialog') &&
+                el.id?.includes('msuEventTable') &&
+                el.style.display === 'none'
+            ) {
+                showStatus('➡ Форма закрыта — автопереход');
+                setTimeout(goNext, 500);
+            }
+        });
+    });
+
+    obs.observe(document.body, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['style', 'class']
+    });
+}
+
+
 
 /* ================= BOOT ================= */
 
@@ -364,6 +399,7 @@ const boot = setInterval(() => {
         createUI();
         waitForEvent();
         waitForForm();
+        watchDialogHide()
     }
 }, 300);
 
