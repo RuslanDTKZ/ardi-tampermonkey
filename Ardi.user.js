@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ardi
 // @namespace    https://github.com/RuslanDTKZ/ardi-tampermonkey
-// @version      4.14
+// @version      4.15
 // @description  PrimeFaces automation с UI-настройками
 // @author       RD
 // @match        https://ala.socium.kz/*
@@ -31,13 +31,25 @@
         AUTO_NEXT_ON_CLOSE: false,
         PARTICIPANTS_ENABLED: false,
         PARTICIPANTS: [
-            'БАТЫРКУЛОВА КЕУКЕР ЕРЕЖЕПОВНА',
-            'НУРСЕИТОВА САМАЛ ЕРЖАНОВНА'
+            'ИВАНОВ ИВАН',
+            'ПЕТРОВ ПЕТР'
         ]
     };
 
+    function deepMerge(base, saved) {
+        const out = structuredClone(base);
+        for (const k in saved) {
+            if (typeof saved[k] === 'object' && saved[k] !== null && !Array.isArray(saved[k])) {
+                out[k] = deepMerge(base[k] || {}, saved[k]);
+            } else {
+                out[k] = saved[k];
+            }
+        }
+        return out;
+    }
+
     function loadSettings() {
-        return Object.assign({}, DEFAULT_SETTINGS, GM_getValue('settings', {}));
+        return deepMerge(DEFAULT_SETTINGS, GM_getValue('settings', {}));
     }
 
     function saveSettings(s) {
@@ -427,15 +439,13 @@
 
         let dateFixed = false;
 
-        if (s.AUTO_UPDATE_DATE) {
-            const res = safeFormatDateTime(s.FORM_DATA.date);
-            dateFixed = res.fixed;
-            d.value = updateDateKeepingTime(res.value);
-        } else {
-            const res = safeFormatDateTime(s.FORM_DATA.date);
-            dateFixed = res.fixed;
-            d.value = res.value;
-        }
+        const res = safeFormatDateTime(s.FORM_DATA.date);
+        dateFixed = res.fixed;
+
+        d.value = s.AUTO_UPDATE_DATE
+            ? updateDateKeepingTime(res.value)
+        : res.value;
+
 
         n.value = s.FORM_DATA.number;
         x.value = s.FORM_DATA.text;
@@ -562,7 +572,9 @@
 
             document.querySelector('#j_idt146\\:j_idt154')?.click();
             showStatus('🎉 Соисполнители добавлены');
-        } catch (e) {}
+        } catch (e) {
+            addError(e?.message || 'Ошибка добавления соисполнителей');
+        }
     }
 
     function waitEl(sel) {
