@@ -31,9 +31,12 @@
    chrome://extensions
    ```
 
-5. Перейдите в **Tampermonkey → Сведения / Подробные сведения** и включите:
+5. Перейдите в **Tampermonkey → Сведения / Подробные сведения**
+<img width="836" height="130" alt="image" src="https://github.com/user-attachments/assets/1f8e34a3-894d-40b9-89df-2c973dff74a8" />
 
-   * **Разрешить пользовательские скрипты**
+   * **И включите: Разрешить пользовательские скрипты**
+     <img width="818" height="105" alt="image" src="https://github.com/user-attachments/assets/d66751b6-c5aa-4832-8c80-64dba84dac53" />
+
 
 ---
 
