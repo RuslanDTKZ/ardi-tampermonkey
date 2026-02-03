@@ -492,11 +492,17 @@
         const btn = getSaveButton();
         if (!btn) return;
 
+        const s = loadSettings();
+
         btn.disabled = false;
         btn.style.background = '#3cedfa';
         btn.style.borderColor = '#3cedfa';
         btn.style.opacity = '1';
-        btn.querySelector('.ui-button-text').textContent = 'Сохранить';
+        if (s.AUTO_NEXT_ON_CLOSE) {
+            btn.querySelector('.ui-button-text').textContent = 'Сохранить и перейти далее';
+        } else {
+            btn.querySelector('.ui-button-text').textContent = 'Сохранить';
+        }
     }
 
     /* ================= PARTICIPANTS ================= */
