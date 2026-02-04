@@ -17,19 +17,18 @@
    * Chrome / Edge / Firefox:
      [https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
 
-2. Откройте ссылку на скрипт:
 
-   ```
-   https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js
-   ```
+2. Откройте ссылку на скрипт: [https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js](https://github.com/RuslanDTKZ/ardi-tampermonkey/raw/refs/heads/main/Ardi.user.js)
+   
 
 3. Нажмите **Установить**
 
-4. Откройте:
+4. Откройте управление расширениями:
+   
+   Скопируйте и вставьте в адресную строку браузера:
+`chrome://extensions`
 
-   ```
-   chrome://extensions
-   ```
+   
 
 5. Перейдите в **Tampermonkey → Сведения / Подробные сведения**
 <img width="836" height="130" alt="image" src="https://github.com/user-attachments/assets/1f8e34a3-894d-40b9-89df-2c973dff74a8" />
